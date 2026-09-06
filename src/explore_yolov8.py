@@ -24,7 +24,6 @@ for i in range(10):
 avg=sum(times)/len(times)
 logger.info(f"pytorch inference = {avg:.2f} ms/frame")
 logger.info(f"fps = {1000/avg:.1f}")
-logger.info("exporting onnx")
-model.export(format="onnx")
+# (export + full benchmark now live in benchmark.py)
 logger.info("done")
 
