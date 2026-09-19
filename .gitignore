@@ -236,3 +236,6 @@ logs/
 !data/ffpp/
 data/ffpp/*
 !data/ffpp/splits/
+
+# personal study notes - local only
+PROJECT_GUIDE.md

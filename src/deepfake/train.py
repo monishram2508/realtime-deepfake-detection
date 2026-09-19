@@ -46,8 +46,6 @@ from deepfake.metrics import best_threshold, by_group, evaluate, roc_auc
 
 logger=get_logger(__name__)
 
-# ImageNet statistics - the pretrained Xception was normalized this way and the
-# features fall apart if it is fed anything else.
 imagenet_mean=np.array([0.485,0.456,0.406],dtype=np.float32)
 imagenet_std=np.array([0.229,0.224,0.225],dtype=np.float32)
 
@@ -62,27 +60,6 @@ def pick_device(requested=None):
     return torch.device("cpu")
 
 
-# Measured with src/deepfake/bench_train.py on the machine this was written on
-# (Apple M2, 8 GB unified memory), two sweeps an hour apart:
-#
-#   sweep A   batch  4   311 ms/step   12.8 img/s
-#             batch  8   833 ms/step    9.6 img/s
-#             batch 12  1128 ms/step   10.6 img/s
-#             batch 16  130794 ms/step  0.12 img/s   <- 89x collapse
-#
-#   sweep B   batch  4   320 ms/step   12.5 img/s
-#             batch  8  72915 ms/step   0.11 img/s   <- collapse, 8 not 16
-#
-# The cliff moved. It is not a property of the batch size: at rest this machine
-# already sits at 7.2 GB of its 8 GB swap committed and 19% memory free, so how
-# much headroom Xception gets depends on whatever else is open. When it runs out
-# macOS pages MPS buffers to disk instead of raising out-of-memory - so nothing
-# fails, the loss curve stays correct, and the run silently costs ~100x more.
-#
-# Hence batch 4 on MPS: not because 4 is optimal, but because it is the only size
-# observed to survive both sweeps. Even then the projection is ~2.6 h/epoch and
-# ~31 h for one 12-epoch run, which is why the generalization study belongs on a
-# rented GPU and this default exists mainly to keep smoke tests honest.
 safe_batch={"cuda":32,"mps":4,"cpu":4}
 
 
@@ -136,7 +113,6 @@ def load_rows(manifest_path,split,exclude_method=None,only_method=None,limit=Non
     payload=json.loads(Path(manifest_path).read_text())
     rows=[r for r in payload["crops"] if r["split"]==split]
     if exclude_method:
-        # originals always stay - it is the manipulation that is held out
         rows=[r for r in rows if r["method"]=="original" or r["method"] not in exclude_method]
     if only_method:
         rows=[r for r in rows if r["method"]=="original" or r["method"] in only_method]
@@ -169,7 +145,6 @@ def predict(model,rows,device,size,batch_size,workers):
     scores=[]
     for images,_ in loader:
         logits=model(images.to(device))
-        # index 1 = fake, so this is P(manipulated)
         scores.append(torch.softmax(logits.float(),dim=1)[:,1].cpu().numpy())
     return np.concatenate(scores) if scores else np.array([])
 
@@ -220,8 +195,6 @@ def main():
     if not train_rows or not val_rows:
         raise SystemExit(f"no rows in {args.manifest} - run src/deepfake/dataset.py first")
 
-    # the guarantee from ffpp.py has to survive crop extraction too, so re-check
-    # it here on the actual training rows rather than trusting it upstream
     train_ids={r["identity"] for r in train_rows}|{r["source"] for r in train_rows if r["source"]}
     val_ids={r["identity"] for r in val_rows}|{r["source"] for r in val_rows if r["source"]}
     leaked=train_ids&val_ids
@@ -266,8 +239,6 @@ def main():
                     f"val frame AUC {frame_auc:.4f} acc {report['frames']['accuracy']:.4f} | "
                     f"val video AUC {video_auc:.4f} | {elapsed:.1f}s")
 
-        # video AUC can be nan when a smoke-test split holds one video, so fall
-        # back to frame AUC rather than letting the comparison silently fail
         selector=video_auc if not np.isnan(video_auc) else frame_auc
         if selector>best_auc:
             best_auc,best_epoch,stale=selector,epoch,0
@@ -281,7 +252,6 @@ def main():
                 logger.info(f"no gain for {args.patience} epochs - stopping at {epoch}")
                 break
 
-    # the operating point is fitted on validation, never on test
     model.load_state_dict(torch.load(checkpoint,map_location=device)["state_dict"])
     scores=predict(model,val_rows,device,args.size,batch_size,args.workers)
     threshold,_=best_threshold([r["label"] for r in val_rows],scores)

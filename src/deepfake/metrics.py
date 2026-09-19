@@ -35,7 +35,7 @@ def roc_auc(labels,scores):
     positives=int((labels==1).sum())
     negatives=int((labels==0).sum())
     if positives==0 or negatives==0:
-        return float("nan")  # undefined with one class present - say so, don't return 0.5
+        return float("nan")
 
     order=np.argsort(scores,kind="mergesort")
     ranked=scores[order]
@@ -45,7 +45,7 @@ def roc_auc(labels,scores):
         j=i
         while j+1<len(ranked) and ranked[j+1]==ranked[i]:
             j+=1
-        ranks[order[i:j+1]]=(i+j)/2.0+1.0  # average rank over the tied block
+        ranks[order[i:j+1]]=(i+j)/2.0+1.0
         i=j+1
 
     rank_sum=ranks[labels==1].sum()
@@ -88,8 +88,6 @@ def best_threshold(labels,scores,metric="f1"):
     candidates=np.unique(scores)
     if len(candidates)==0:
         return 0.5,{}
-    # midpoints between distinct scores, plus the extremes, so every distinct
-    # split of the data is actually reachable
     if len(candidates)>1:
         candidates=np.concatenate([[candidates[0]-1e-6],
                                    (candidates[:-1]+candidates[1:])/2.0,
@@ -163,8 +161,6 @@ def by_group(rows,scores,key="method",threshold=0.5):
         group_scores=[s for _,s in pairs]
         labels=np.array([r["label"] for r in group_rows])
         stats=binary_metrics(labels,group_scores,threshold)
-        # AUC needs both classes; a single-method slice is all-fake by construction,
-        # so report recall there and leave AUC undefined rather than faking it
         stats["auc"]=round(roc_auc(labels,group_scores),4)
         stats["n"]=len(group_rows)
         out[group]=stats

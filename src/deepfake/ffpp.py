@@ -26,8 +26,6 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-# run directly (python src/deepfake/ffpp.py) and only src/deepfake lands on the
-# path, so the shared modules one level up are invisible. Same fix as conftest.py.
 sys.path.insert(0,str(Path(__file__).resolve().parent.parent))
 
 from config import data_path, outputs_path, get_logger
@@ -38,9 +36,6 @@ logger=get_logger(__name__)
 ffpp_path=data_path/"ffpp"
 splits_path=ffpp_path/"splits"
 
-# The four FF++ manipulation methods. DeepFakeDetection and FaceShifter ship with
-# the dataset too but use a different naming scheme and a different identity pool,
-# so they are held back as a genuinely unseen test set rather than mixed in here.
 methods=["Deepfakes","Face2Face","FaceSwap","NeuralTextures"]
 compressions=["raw","c23","c40"]
 
@@ -110,7 +105,7 @@ def entries_for_split(name,root=None,compression="c23",use_methods=None,splits_d
                     "path":str(directory/f"{a}_{b}.mp4"),
                     "label":fake_label,
                     "method":method,
-                    "identity":a,   # the face you see is the target's
+                    "identity":a,
                     "source":b,
                     "split":name,
                     "compression":compression,

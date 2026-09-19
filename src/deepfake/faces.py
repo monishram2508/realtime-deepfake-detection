@@ -40,9 +40,6 @@ yunet_name="face_detection_yunet_2023mar.onnx"
 yunet_url=("https://github.com/opencv/opencv_zoo/raw/main/models/"
            "face_detection_yunet/face_detection_yunet_2023mar.onnx")
 
-# FF++ baselines crop a square box centred on the detected face and scaled by
-# 1.3. Changing this silently invalidates any comparison against published
-# numbers, so it is a named constant rather than a default buried in a signature.
 ffpp_crop_scale=1.3
 xception_input=299
 
@@ -70,7 +67,6 @@ class facedetector:
                  name="facedetector"):
         self.model_path=model_file(model_path)
         self.conf_thresh=conf_thresh
-        # (320, 320) is a placeholder - set_input_size is called per frame below
         self.detector=cv2.FaceDetectorYN.create(
             str(self.model_path),"",(320,320),conf_thresh,nms_thresh,top_k)
         self._size=(320,320)
@@ -101,7 +97,6 @@ class facedetector:
         out=[]
         for face in faces:
             x,y,w,h=face[:4]
-            # YuNet can return boxes that run off the edge of the frame
             x,y=max(0.0,float(x)),max(0.0,float(y))
             w=min(float(w),frame_w-x)
             h=min(float(h),frame_h-y)
@@ -112,7 +107,6 @@ class facedetector:
                 'conf':round(float(face[14]),3),
                 'class_id':0,
                 'class_name':'face',
-                # right eye, left eye, nose, right mouth, left mouth
                 'landmarks':[[round(float(face[4+2*i]),1),round(float(face[5+2*i]),1)]
                              for i in range(5)],
             })
@@ -153,9 +147,6 @@ def crop_face(image,detection,scale=ffpp_crop_scale,size=xception_input):
     crop=image[y1:y1+box,x1:x1+box]
     if crop.size==0:
         return None
-    # INTER_AREA downsamples without the aliasing INTER_LINEAR introduces, and
-    # aliasing is exactly the kind of high-frequency artefact this classifier
-    # keys on - resampling badly would manufacture the signal we are detecting.
     interp=cv2.INTER_AREA if box>size else cv2.INTER_CUBIC
     return cv2.resize(crop,(size,size),interpolation=interp)
 

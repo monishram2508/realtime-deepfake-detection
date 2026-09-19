@@ -75,7 +75,6 @@ def extract_video(row,detector,frames,out_root,scale,size,overwrite=False):
     for index in wanted:
         out_path=out_dir/f"{stem}_f{index:05d}.jpg"
         if out_path.exists() and not overwrite:
-            # resumable: a run over 5000 videos will get interrupted
             rows.append(_crop_row(row,out_path,index))
             stats["skipped"]+=1
             continue
@@ -198,11 +197,8 @@ def build_standin(videos,frames,out_root,size=xception_input):
             crop=crop_face(frame,face,size=size)
             if crop is None:
                 continue
-            # the same face lands in both classes, so the classifier cannot win
-            # by memorizing identity - it has to find the artefact
             for label,image in ((0,crop),(1,degrade(crop))):
                 method="standin_clean" if label==0 else "standin_artefact"
-                # hold out whole videos, exactly as the real splits do
                 split="train" if stem.endswith(("1","3","5","7","9")) else "val"
                 out_dir=out_root/split/label_names[label]/method
                 out_dir.mkdir(parents=True,exist_ok=True)

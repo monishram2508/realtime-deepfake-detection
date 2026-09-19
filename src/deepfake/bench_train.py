@@ -74,8 +74,6 @@ def bench_step(model_name,device,batch,size,iters,warmup):
     model=timm.create_model(model_name,pretrained=False,num_classes=2).to(dev)
     optimizer=torch.optim.AdamW(model.parameters(),lr=1e-4)
     criterion=nn.CrossEntropyLoss()
-    # random tensors, not real crops: this measures compute, and JPEG decode
-    # would put the data loader in the middle of a model benchmark
     images=torch.randn(batch,3,size,size,device=dev)
     labels=torch.randint(0,2,(batch,),device=dev)
 
@@ -113,8 +111,6 @@ def sweep(models,devices,batches,size,iters,warmup,cliff_ratio=0.5):
                                  "ms_per_step":None,"img_per_sec":None,
                                  "failed":type(e).__name__})
                     break
-                # a *drop* in throughput as batch grows means the machine started
-                # paging - bigger batches should always be at least as efficient
                 cliff=bool(previous and ips<previous*cliff_ratio)
                 rows.append({"model":model_name,"device":device,"batch":batch,
                              "ms_per_step":round(ms,1),"img_per_sec":round(ips,2),
