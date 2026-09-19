@@ -224,6 +224,15 @@ __marimo__/
 .streamlit/secrets.toml
 
 # project artefacts (regenerate with src/create_video.py, src/benchmark.py, src/demo.py)
-data/
+# data/* rather than data/: git cannot re-include anything under an excluded
+# directory, and the FF++ splits below have to survive.
+data/*
 outputs/
 logs/
+
+# ...except the FF++ official train/val/test splits. They are 15 KB, public
+# (they ship in the FaceForensics repo, not behind the access form), and the
+# manifest cannot be built without them - so they belong in version control.
+!data/ffpp/
+data/ffpp/*
+!data/ffpp/splits/
