@@ -237,5 +237,6 @@ logs/
 data/ffpp/*
 !data/ffpp/splits/
 
-# personal study notes - local only
-PROJECT_GUIDE.md
+# personal study notes and their build script - local only, not part of the codebase
+PROJECT_GUIDE.*
+build_guide.py
