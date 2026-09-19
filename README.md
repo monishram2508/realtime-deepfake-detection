@@ -1,14 +1,14 @@
 <div align="center">
 
-# Real-Time Multi-Camera Object Detection Pipeline
+# Real-Time Deepfake Detection
 
-**Synchronized multi-camera inference with YOLOv8 + ONNX Runtime — and a measured account of which optimizations actually worked.**
+**Detecting manipulated faces in live video — built on a measured multi-camera inference pipeline, with an honest account of what every optimization cost.**
 
 ![Python](https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python&logoColor=white)
 ![ONNX Runtime](https://img.shields.io/badge/ONNX%20Runtime-1.19-005CED?logo=onnx&logoColor=white)
 ![YOLOv8](https://img.shields.io/badge/YOLOv8-Ultralytics-0B0B0B)
 ![OpenCV](https://img.shields.io/badge/OpenCV-4.13-5C3EE8?logo=opencv&logoColor=white)
-![Tests](https://github.com/monishram2508/multicam-detection/actions/workflows/tests.yml/badge.svg)
+![Tests](https://github.com/monishram2508/realtime-deepfake-detection/actions/workflows/tests.yml/badge.svg)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 ![Two synchronized camera feeds with YOLOv8 detections and track ids](docs/demo.jpg)
@@ -16,6 +16,38 @@
 *Two cameras, one synchronized batch, tracked identities. Boxes, classes, confidences and `#track_id`s come straight out of `outputs/detections.json`.*
 
 </div>
+
+---
+
+## Where this is
+
+This repository is two halves of one system.
+
+**The inference pipeline — finished and measured.** Multi-camera ingest, synchronized
+batching, YOLOv8 through ONNX Runtime, IoU tracking, and a full optimization study
+across execution providers and quantization schemes. Every number below is
+reproducible with the commands in [Reproducing every number](#reproducing-every-number).
+
+**The deepfake detector — in progress.** A face-manipulation classifier trained on
+FaceForensics++, reusing that pipeline wholesale: the frame loaders, the tracker,
+the metrics harness and the provider-selection logic are all unchanged. `ioutracker`
+tracks faces with no modifications at all, because the face detector emits the same
+detection contract the YOLOv8 detector does.
+
+What exists today: dataset layout with an identity-leakage guard, face detection and
+the FF++ crop convention, crop extraction, ground-truth metrics with frame-to-video
+aggregation, an Xception fine-tuning loop, and a training-throughput study. What does
+not exist yet: **a trained model or any accuracy number.** FaceForensics++ access is
+pending, and nothing in this README claims a detection result that has not been
+measured.
+
+```bash
+python src/deepfake/ffpp.py --manifest        # build the FF++ manifest, verify the splits
+python src/deepfake/faces.py --video <path>   # face detection smoke test
+python src/deepfake/bench_train.py            # training throughput and the memory cliff
+```
+
+See [`src/deepfake/`](src/deepfake/) and the commit history for the reasoning behind each piece.
 
 ---
 
@@ -82,8 +114,8 @@ its own would have shipped it.
 ## Quick start
 
 ```bash
-git clone https://github.com/monishram2508/multicam-detection.git
-cd multicam-detection
+git clone https://github.com/monishram2508/realtime-deepfake-detection.git
+cd realtime-deepfake-detection
 
 python -m venv venv && source venv/bin/activate      # Windows: venv\Scripts\activate
 pip install -r requirements.txt
